@@ -1,0 +1,15 @@
+
+> amazon-chime-sdk-js-serverless-demos@0.1.0 deploy
+> node ./deploy.js "-r" "us-east-1" "-b" "test-bucket-87827" "test-stack-87827" "-a" "meeting"
+
+Invalid argument test-stack-87827
+Usage: deploy.sh [-r region] [-b bucket] [-s stack] [-a application] [-e]
+  -r, --region                         Target region, default 'us-east-1'
+  -b, --s3-bucket                      S3 bucket for deployment, required
+  -s, --stack-name                     CloudFormation stack name, required
+  -a, --application                    Browser application to deploy, default 'meetingV2'
+  -e, --event-bridge                   Enable EventBridge integration, default is no integration
+  -c, --chime-endpoint                 AWS SDK Chime endpoint, default is 'https://service.chime.aws.amazon.com'
+  -t, --enable-termination-protection  Enable termination protection for the Cloudformation stack, default is false
+  -l, --disable-printing-logs          Disable printing logs
+  -h, --help                           Show help and exit

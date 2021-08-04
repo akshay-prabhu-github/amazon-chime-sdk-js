@@ -21,6 +21,7 @@ export default class DefaultBrowserBehavior implements BrowserBehavior, Extended
     crios: 86,
     fxios: 23,
     'ios-webview': 605,
+    'chromium-webview': 92,
   };
 
   private browserName: { [id: string]: string } = {
@@ -35,6 +36,7 @@ export default class DefaultBrowserBehavior implements BrowserBehavior, Extended
     crios: 'Chrome iOS',
     fxios: 'Firefox iOS',
     'ios-webview': 'WKWebView iOS',
+    'chromium-webview': 'Chrome WebView',
   };
 
   private chromeLike: string[] = [
@@ -199,6 +201,10 @@ export default class DefaultBrowserBehavior implements BrowserBehavior, Extended
 
   supportsSenderSideBandwidthEstimation(): boolean {
     return this.hasChromiumWebRTC() || this.isSafari();
+  }
+
+  doesNotSupportMediaDeviceLabels(): boolean {
+    return this.browser.name === 'chromium-webview';
   }
 
   // TODO: Deprecated, needs to be removed

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   default. If the browser sends an incorrect packet rate, this will be logged
   as an error in the console.
 - Add a warning log in `InMemoryJSONEventBuffer`'s `send` function when retrying starts.
+- Added support for Chromium WebView
 
 ### Changed
 - Update `InMemoryJSONEventBuffer` to retry with backoff.
