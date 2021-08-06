@@ -16,15 +16,48 @@ export default class DefaultTransceiverController implements TransceiverControll
 
   constructor(protected logger: Logger, protected browserBehavior: BrowserBehavior) {}
 
-  setEncodingParameters(_params: Map<string, RTCRtpEncodingParameters>): void {
-    return;
+  async setEncodingParameters(encodingParamMap: Map<string, RTCRtpEncodingParameters>): Promise<void> {
+    if (!this._localCameraTransceiver || this._localCameraTransceiver.direction !== 'sendrecv') {
+      return;
+    }
+
+    const sender = this._localCameraTransceiver.sender;
+    const newEncodingParams = Array.from(encodingParamMap.values());
+    if (newEncodingParams.length <= 0) {
+      return;
+    }
+    let hasChanged = false;
+
+    const oldParam: RTCRtpSendParameters = sender.getParameters();
+    if (!oldParam.encodings) {
+      oldParam.encodings = newEncodingParams;
+      hasChanged = true;
+    } else {
+      for (let i = 0; i < oldParam.encodings.length; i++) {
+        for (let j = 0; j < newEncodingParams.length; j++) {
+          if (oldParam.encodings[i].rid === newEncodingParams[j].rid) {
+            if (oldParam.encodings[i].maxBitrate !== newEncodingParams[j].maxBitrate) {
+              oldParam.encodings[i].maxBitrate = newEncodingParams[j].maxBitrate;
+              hasChanged = true;
+            }
+            if (oldParam.encodings[i].scaleResolutionDownBy !== newEncodingParams[j].scaleResolutionDownBy) {
+              oldParam.encodings[i].scaleResolutionDownBy = newEncodingParams[j].scaleResolutionDownBy;
+              hasChanged = true;
+            }
+          }
+        }
+      }
+    }
+
+    if (hasChanged) {
+      await sender.setParameters(oldParam);
+    }
   }
 
   static async setVideoSendingBitrateKbpsForSender(
     sender: RTCRtpSender,
     bitrateKbps: number,
-    _logger: Logger,
-    scaleResolutionDownBy: number = 1
+    _logger: Logger
   ): Promise<void> {
     if (!sender || bitrateKbps <= 0) {
       return;
@@ -35,7 +68,6 @@ export default class DefaultTransceiverController implements TransceiverControll
     }
     for (const encodeParam of param.encodings) {
       encodeParam.maxBitrate = bitrateKbps * 1000;
-      encodeParam.scaleResolutionDownBy = scaleResolutionDownBy;
     }
     await sender.setParameters(param);
   }
@@ -60,10 +92,7 @@ export default class DefaultTransceiverController implements TransceiverControll
     return this._localCameraTransceiver;
   }
 
-  async setVideoSendingBitrateKbps(
-    bitrateKbps: number,
-    scaleResolutionDownBy: number = 1
-  ): Promise<void> {
+  async setVideoSendingBitrateKbps(bitrateKbps: number): Promise<void> {
     // this won't set bandwidth limitation for video in Chrome
     if (!this._localCameraTransceiver || this._localCameraTransceiver.direction !== 'sendrecv') {
       return;
@@ -72,8 +101,7 @@ export default class DefaultTransceiverController implements TransceiverControll
     await DefaultTransceiverController.setVideoSendingBitrateKbpsForSender(
       sender,
       bitrateKbps,
-      this.logger,
-      scaleResolutionDownBy
+      this.logger
     );
   }
 

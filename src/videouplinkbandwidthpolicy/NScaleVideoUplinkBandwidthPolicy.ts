@@ -31,7 +31,13 @@ export default class NScaleVideoUplinkBandwidthPolicy implements VideoUplinkBand
   }
 
   chooseEncodingParameters(): Map<string, RTCRtpEncodingParameters> {
-    return new Map<string, RTCRtpEncodingParameters>();
+    const encodingParams =  new Map<string, RTCRtpEncodingParameters>();
+    encodingParams.set('nscale', {
+      rid: 'nscale',
+      scaleResolutionDownBy: this.scaleResolutionDownBy(),
+      maxBitrate: this.maxBandwidthKbps() * 1000
+    });
+    return encodingParams;
   }
 
   updateIndex(videoIndex: VideoStreamIndex): void {
@@ -93,7 +99,15 @@ export default class NScaleVideoUplinkBandwidthPolicy implements VideoUplinkBand
     return Math.trunc(rate);
   }
 
-  scaleResolutionDownBy(): number {
+  setIdealMaxBandwidthKbps(idealMaxBandwidthKbps: number): void {
+    this.idealMaxBandwidthKbps = idealMaxBandwidthKbps;
+  }
+
+  setHasBandwidthPriority(hasBandwidthPriority: boolean): void {
+    this.hasBandwidthPriority = hasBandwidthPriority;
+  }
+
+  private scaleResolutionDownBy(): number {
     if (this.hasBandwidthPriority) {
       return 1;
     }
@@ -105,16 +119,8 @@ export default class NScaleVideoUplinkBandwidthPolicy implements VideoUplinkBand
     } else if (this.numParticipants <= 16) {
       scale = 2;
     } else {
-      scale = 4;
+      scale = 3;
     }
     return scale;
-  }
-
-  setIdealMaxBandwidthKbps(idealMaxBandwidthKbps: number): void {
-    this.idealMaxBandwidthKbps = idealMaxBandwidthKbps;
-  }
-
-  setHasBandwidthPriority(hasBandwidthPriority: boolean): void {
-    this.hasBandwidthPriority = hasBandwidthPriority;
   }
 }

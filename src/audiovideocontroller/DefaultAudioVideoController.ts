@@ -921,8 +921,7 @@ export default class DefaultAudioVideoController
     // we do not update parameter for simulcast since they are updated in AttachMediaInputTask
     if (!this.meetingSessionContext.enableSimulcast) {
       const maxBitrateKbps = this.meetingSessionContext.videoCaptureAndEncodeParameter.encodeBitrates()[0];
-      const scaleResolutionDownBy = this.getScaleDownFactorFromUplinkPolicy();
-      this.enforceBandwidthLimitationForSender(maxBitrateKbps, scaleResolutionDownBy);
+      this.enforceBandwidthLimitationForSender(maxBitrateKbps);
     }
     this.logger.info('updated audio-video session');
   }
@@ -1028,20 +1027,22 @@ export default class DefaultAudioVideoController
   }
 
   private async enforceBandwidthLimitationForSender(
-    maxBitrateKbps: number,
-    scaleDownBy: number = 1
+    maxBitrateKbps: number
   ): Promise<void> {
     if (this.meetingSessionContext.browserBehavior.requiresUnifiedPlan()) {
-      await this.meetingSessionContext.transceiverController.setVideoSendingBitrateKbps(
-        maxBitrateKbps,
-        scaleDownBy
-      );
+      const encodingParams = this.meetingSessionContext.videoUplinkBandwidthPolicy.chooseEncodingParameters();
+      if (encodingParams.size <= 0) {
+        await this.meetingSessionContext.transceiverController.setVideoSendingBitrateKbps(
+          maxBitrateKbps
+        );
+      } else {
+        await this.meetingSessionContext.transceiverController.setEncodingParameters(encodingParams);
+      }
     } else {
       await DefaultTransceiverController.setVideoSendingBitrateKbpsForSender(
         this.meetingSessionContext.localVideoSender,
         maxBitrateKbps,
-        this.meetingSessionContext.logger,
-        scaleDownBy
+        this.meetingSessionContext.logger
       );
     }
   }
@@ -1109,20 +1110,25 @@ export default class DefaultAudioVideoController
       this.meetingSessionContext.videoUplinkBandwidthPolicy &&
       !this.meetingSessionContext.enableSimulcast
     ) {
-      const oldMaxBandwidth = this.meetingSessionContext.videoUplinkBandwidthPolicy.maxBandwidthKbps();
-      const oldScaleFactor = this.getScaleDownFactorFromUplinkPolicy();
-
-      this.meetingSessionContext.videoUplinkBandwidthPolicy.setHasBandwidthPriority(
-        hasBandwidthPriority
-      );
-      const newMaxBandwidth = this.meetingSessionContext.videoUplinkBandwidthPolicy.maxBandwidthKbps();
-      const newScaleFactor = this.getScaleDownFactorFromUplinkPolicy();
-
-      if (oldMaxBandwidth !== newMaxBandwidth || oldScaleFactor !== newScaleFactor) {
-        this.logger.info(
-          `video send bandwidth priority ${hasBandwidthPriority} max has changed from ${oldMaxBandwidth} kbps and scale down factor ${oldScaleFactor} to ${newMaxBandwidth} kbps and scale down factor ${newScaleFactor}`
+      if (this.meetingSessionContext.videoUplinkBandwidthPolicy.chooseEncodingParameters().size > 0) {
+        this.meetingSessionContext.videoUplinkBandwidthPolicy.setHasBandwidthPriority(
+          hasBandwidthPriority
         );
-        await this.enforceBandwidthLimitationForSender(newMaxBandwidth, newScaleFactor);
+        await this.enforceBandwidthLimitationForSender(this.meetingSessionContext.videoUplinkBandwidthPolicy.maxBandwidthKbps());
+      } else {
+        const oldMaxBandwidth = this.meetingSessionContext.videoUplinkBandwidthPolicy.maxBandwidthKbps();
+
+        this.meetingSessionContext.videoUplinkBandwidthPolicy.setHasBandwidthPriority(
+          hasBandwidthPriority
+        );
+        const newMaxBandwidth = this.meetingSessionContext.videoUplinkBandwidthPolicy.maxBandwidthKbps();
+
+        if (oldMaxBandwidth !== newMaxBandwidth) {
+          this.logger.info(
+            `video send bandwidth priority ${hasBandwidthPriority} max has changed from ${oldMaxBandwidth} kbps to ${newMaxBandwidth} kbps`
+          );
+          await this.enforceBandwidthLimitationForSender(newMaxBandwidth);
+        }
       }
     }
   }
@@ -1155,11 +1161,5 @@ export default class DefaultAudioVideoController
         f.bind(observer)(simulcastLayers)
       );
     });
-  }
-
-  private getScaleDownFactorFromUplinkPolicy(): number {
-    return this.meetingSessionContext.videoUplinkBandwidthPolicy.scaleResolutionDownBy
-      ? this.meetingSessionContext.videoUplinkBandwidthPolicy.scaleResolutionDownBy()
-      : 1;
   }
 }

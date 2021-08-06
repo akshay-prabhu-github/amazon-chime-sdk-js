@@ -34,11 +34,6 @@ export default interface VideoUplinkBandwidthPolicy {
   maxBandwidthKbps(): number;
 
   /**
-   * Gets the factor by which to scale down the video during encoding.
-   */
-  scaleResolutionDownBy?(): number;
-
-  /**
    * Sets ideal maximum bandwidth kbps.
    */
   setIdealMaxBandwidthKbps(maxBandwidthKbps: number): void;
